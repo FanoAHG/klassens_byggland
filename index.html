@@ -139,7 +139,7 @@
 <script>
   // ⚙️ Koble til din Supabase: lim inn URL og anon-nøkkel fra prosjektet ditt (supabase.com → Settings → API)
   const SUPABASE_URL = "https://mbxqymlskfbzyworgtfp.supabase.co";
-  const SUPABASE_KEY = "sb_secret_s7JqEb2B2yetfFVeclOHdg_X4CEv4rb";
+  const SUPABASE_KEY = "sb_publishable_ogyV0dLu7HeJsfyLaW08cA_WG8JlQWh";
   const sb = (SUPABASE_URL.includes("DITT-PROSJEKT"))
     ? { from: () => ({ select: () => Promise.resolve({ data: [], error: null }), insert: () => Promise.resolve({ data: null, error: { message: "Demo-modus: koble til Supabase i koden" } }) }) }
     : window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
