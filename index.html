@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klassens Byggland – kart og butikk</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: #eef2f7; color: #1e293b; }
+  header { background: #1e3a8a; color: white; padding: 16px 20px; text-align: center; }
+  header h1 { font-size: 1.3rem; }
+  header p { font-size: 0.85rem; opacity: 0.85; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+
+  #login { max-width: 400px; margin: 40px auto; background: white; border-radius: 14px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+  #login input { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+  #login button { width: 100%; margin-top: 10px; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+  #login button:hover { background: #1d4ed8; }
+  .msg { font-size: 0.85rem; color: #64748b; margin-top: 8px; }
+
+  #kart-fane, #butikk-fane { display: none; }
+  .fane-knapper { display: flex; gap: 8px; margin-bottom: 14px; }
+  .fane-knapp { flex: 1; padding: 10px; border: none; border-radius: 10px; background: #cbd5e1; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+  .fane-knapp.aktiv { background: #2563eb; color: white; }
+
+  #kart { position: relative; width: 100%; height: 420px; background: #d8f3dc; border: 3px solid #95d5b2; border-radius: 14px; overflow: hidden; cursor: pointer; background-image: radial-gradient(#b7e4c7 2px, transparent 2px); background-size: 40px 40px; }
+  .bygg-pin { position: absolute; transform: translate(-50%, -100%); text-align: center; cursor: pointer; transition: transform 0.15s; z-index: 2; }
+  .bygg-pin:hover { transform: translate(-50%, -100%) scale(1.15); z-index: 3; }
+  .bygg-pin .ikon { font-size: 2rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+  .bygg-pin .navn { background: white; padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid #cbd5e1; }
+  .bygg-pin.mitt { outline: 3px solid #f59e0b; border-radius: 12px; }
+
+  .kort { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-top: 14px; }
+  .kort h2 { font-size: 1.05rem; margin-bottom: 10px; }
+  input, select, textarea { padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; }
+  .skjema-rad { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .skjema-rad > * { flex: 1; min-width: 140px; }
+  .hoved-knapp { background: #059669; color: white; border: none; border-radius: 8px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+  .hoved-knapp:hover { background: #047857; }
+  .info-liten { font-size: 0.8rem; color: #64748b; }
+
+  #produkter { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+  .produkt { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .produkt img { width: 100%; height: 130px; object-fit: cover; background: #e2e8f0; }
+  .produkt .kropp { padding: 10px; }
+  .produkt .tittel { font-weight: 700; font-size: 0.95rem; }
+  .produkt .pris { color: #059669; font-weight: 700; }
+  .produkt .eier { font-size: 0.78rem; color: #64748b; }
+  .produkt .bygg-navn { display: inline-block; font-size: 0.72rem; background: #dbeafe; color: #1e40af; padding: 1px 8px; border-radius: 6px; margin-top: 4px; }
+
+  .modal-bak { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 10; align-items: center; justify-content: center; padding: 16px; }
+  .modal-bak.åpen { display: flex; }
+  .modal { background: white; border-radius: 14px; padding: 20px; max-width: 380px; width: 100%; max-height: 90vh; overflow: auto; }
+  .modal img.hero { width: 100%; height: 160px; object-fit: cover; border-radius: 10px; background: #e2e8f0; margin-bottom: 12px; }
+  .modal h3 { margin-bottom: 6px; }
+  .modal .verdi { color: #059669; font-weight: 700; font-size: 1.1rem; }
+  .modal .produkter-liste { margin-top: 12px; }
+  .modal .produkt-rad { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
+  .lukk { float: right; background: #e2e8f0; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.85rem; }
+  .tom { text-align: center; color: #64748b; padding: 20px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏘️ Klassens Byggland</h1>
+  <p>Velg tomte, bygg drømmehuset ditt – og se hva naboene har gjort!</p>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <div id="login">
+    <h2 style="margin-bottom:10px;">👋 Hvem er du?</h2>
+    <input id="navn-input" placeholder="Skriv navnet ditt..." maxlength="40">
+    <button id="login-knapp">Start ➡️</button>
+    <p class="msg">Du trenger bare navnet ditt – resten husker Byggland for deg.</p>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none;">
+    <div class="fane-knapper">
+      <button class="fane-knapp aktiv" data-fane="kart-fane">🗺️ Kartet</button>
+      <button class="fane-knapp" data-fane="butikk-fane">🛍️ Min butikk</button>
+    </div>
+
+    <!-- KART -->
+    <section id="kart-fane">
+      <div id="kart" title="Klikk der du vil bygge!"></div>
+      <p class="info-liten" style="margin-top:6px;">👆 Klikk på kartet der du vil plassere bygget ditt. Klikk på andres bygg for å se nærmere!</p>
+      <div class="kort" id="bygg-skjema" style="display:none;">
+        <h2>🏗️ Bygg bygget ditt her!</h2>
+        <div class="skjema-rad">
+          <input id="bygg-navn" placeholder="Navn på bygget (f.eks. Villa Vippestikk)">
+          <select id="bygg-ikon">
+            <option value="🏠">🏠 Enebolig</option>
+            <option value="🏢">🏢 Blokk</option>
+            <option value="🏰">🏰 Slott</option>
+            <option value="🛖">🛖 Hytte</option>
+            <option value="🏬">🏬 Butikkbygg</option>
+            <option value="🏭">🏭 Fabrikk</option>
+          </select>
+          <input id="bygg-pris" type="number" placeholder="Pris (kr)" min="0" step="100000">
+          <input id="bygg-rente" type="number" placeholder="Rente (%)" min="0" max="20" step="0.5">
+        </div>
+        <button class="hoved-knapp" id="lagre-bygg">Bygg! 🔨</button>
+        <p class="info-liten" style="margin-top:8px;">💡 Prøv gjerne ulike priser og renter – du kan alltid bygge om.</p>
+      </div>
+    </section>
+
+    <!-- BUTIKK -->
+    <section id="butikk-fane">
+      <div class="kort">
+        <h2>🛍️ Legg inn et produkt i butikken din</h2>
+        <div class="skjema-rad">
+          <input id="produkt-navn" placeholder="Produktnavn (f.eks. Hjemmebakte boller)">
+          <input id="produkt-pris" type="number" placeholder="Pris (kr)" min="0" step="1">
+        </div>
+        <div class="skjema-rad">
+          <input id="produkt-bilde" type="file" accept="image/*" style="flex:2;">
+          <button class="hoved-knapp" id="lagre-produkt">Publiser produkt 📦</button>
+        </div>
+        <p class="info-liten">📷 Ta et bilde eller last opp et bilde – det vises i butikken din og i klassens varekatalog.</p>
+      </div>
+      <div class="kort">
+        <h2>🛒 Klassens varekatalog</h2>
+        <div id="produkter"><p class="tom">Ingen produkter ennå – bli den første til å selge noe!</p></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- MODAL: se andres bygg -->
+<div class="modal-bak" id="modal-bak">
+  <div class="modal" id="modal-innhold"></div>
+</div>
+
+<script>
+  // ⚙️ Koble til din Supabase: lim inn URL og anon-nøkkel fra prosjektet ditt (supabase.com → Settings → API)
+  const SUPABASE_URL = "https://DITT-PROSJEKT.supabase.co";
+  const SUPABASE_KEY = "din-anon-nøkkel";
+  const sb = (SUPABASE_URL.includes("DITT-PROSJEKT"))
+    ? { from: () => ({ select: () => Promise.resolve({ data: [], error: null }), insert: () => Promise.resolve({ data: null, error: { message: "Demo-modus: koble til Supabase i koden" } }) }) }
+    : window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let meg = localStorage.getItem("byggland-navn") || null;
+  let byggListe = [];
+  let klikkPos = null;
+
+  const IKONER = { "🏠":"enebolig", "🏢":"blokk", "🏰":"slott", "🛖":"hytte", "🏬":"butikk", "🏭":"fabrikk" };
+
+  // ---------- LOGIN ----------
+  document.getElementById("login-knapp").onclick = () => {
+    const n = document.getElementById("navn-input").value.trim();
+    if (!n) { alert("Skriv inn navnet ditt først!"); return; }
+    meg = n;
+    localStorage.setItem("byggland-navn", n);
+    visApp();
+  };
+  function visApp() {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    lastBygg(); lastProdukter();
+  }
+
+  // ---------- FANER ----------
+  document.querySelectorAll(".fane-knapp").forEach(k => {
+    k.onclick = () => {
+      document.querySelectorAll(".fane-knapp").forEach(x => x.classList.remove("aktiv"));
+      k.classList.add("aktiv");
+      document.getElementById("kart-fane").style.display = k.dataset.fane === "kart-fane" ? "block" : "none";
+      document.getElementById("butikk-fane").style.display = k.dataset.fane === "butikk-fane" ? "block" : "none";
+    };
+  });
+
+  // ---------- KART ----------
+  const kart = document.getElementById("kart");
+  kart.onclick = (e) => {
+    if (!meg) return;
+    const r = kart.getBoundingClientRect();
+    klikkPos = { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+    document.getElementById("bygg-skjema").style.display = "block";
+    document.getElementById("bygg-skjema").scrollIntoView({ behavior: "smooth" });
+  };
+
+  function tegnKart() {
+    document.querySelectorAll(".bygg-pin").forEach(p => p.remove());
+    byggListe.forEach(b => {
+      const pin = document.createElement("div");
+      pin.className = "bygg-pin" + (b.eier === meg ? " mitt" : "");
+      pin.style.left = b.x + "%";
+      pin.style.top = b.y + "%";
+      pin.innerHTML = `<div class="ikon">${b.ikon || "🏠"}</div><div class="navn">${b.navn} (${b.eier})</div>`;
+      pin.onclick = (e) => { e.stopPropagation(); åpneModal(b); };
+      kart.appendChild(pin);
+    });
+  }
+
+  async function lastBygg() {
+    const { data, error } = await sb.from("bygg").select("*");
+    if (!error && data) { byggListe = data; tegnKart(); }
+  }
+
+  document.getElementById("lagre-bygg").onclick = async () => {
+    const navn = document.getElementById("bygg-navn").value.trim();
+    const ikon = document.getElementById("bygg-ikon").value;
+    const pris = parseFloat(document.getElementById("bygg-pris").value);
+    const rente = parseFloat(document.getElementById("bygg-rente").value);
+    if (!navn || !klikkPos) { alert("Klikk først på kartet, og gi bygget et navn!"); return; }
+    if (isNaN(pris) || isNaN(rente) || rente < 0 || rente > 20) { alert("Skriv inn pris og en rimelig rente (0–20 %)."); return; }
+
+    // Hva koster det egentlig? (annuitet over 25 år)
+    const r = rente / 100 / 12, n = 25 * 12;
+    const termin = (pris * r) / (1 - Math.pow(1 + r, -n));
+    const totalt = termin * n;
+
+    const rad = { eier: meg, navn, ikon, pris, rente, total_kostnad: Math.round(totalt), x: klikkPos.x, y: klikkPos.y };
+    const { error } = await sb.from("bygg").insert([rad]);
+    if (error) { alert("Klarte ikke lagre: " + error.message); return; }
+    document.getElementById("bygg-skjema").style.display = "none";
+    lastBygg();
+  };
+
+  // ---------- MODAL ----------
+  function åpneModal(b) {
+    const kr = (n) => new Intl.NumberFormat("nb-NO").format(Math.round(n)) + " kr";
+    const r = (b.rente || 0) / 100 / 12, n = 25 * 12;
+    const termin = b.rente > 0 ? (b.pris * r) / (1 - Math.pow(1 + r, -n)) : b.pris / n;
+    const totalt = termin * n;
+    const m = document.getElementById("modal-innhold");
+    m.innerHTML = `
+      <button class="lukk" onclick="document.getElementById('modal-bak').classList.remove('åpen')">✖ Lukk</button>
+      <div style="font-size:3rem;text-align:center;">${b.ikon || "🏠"}</div>
+      <h3>${b.navn}</h3>
+      <p class="info-liten">Bygget til ${b.eier}</p>
+      <p style="margin-top:10px;">Pris: <b>${kr(b.pris)}</b></p>
+      <p>Rente: <b>${b.rente} %</b> over 25 år</p>
+      <p>Per måned: <b class="verdi">${kr(termin)}</b></p>
+      <p>Totalt betalt: <b class="verdi">${kr(totalt)}</b> <span class="info-liten">(hvorav ${kr(totalt - b.pris)} er renter!)</span></p>
+      <div class="produkter-liste"><b>🛍️ Produkter her:</b><div id="modal-produkter"></div></div>
+    `;
+    const beholder = m.querySelector("#modal-produkter");
+    const produkter = produktListe.filter(p => p.eier === b.eier);
+    beholder.innerHTML = produkter.length
+      ? produkter.map(p => `<div class="produkt-rad"><span>${p.navn}</span><span class="pris">${kr(p.pris)}</span></div>`).join("")
+      : `<p class="info-liten">Ingen produkter ennå.</p>`;
+    document.getElementById("modal-bak").classList.add("åpen");
+  }
+  document.getElementById("modal-bak").onclick = (e) => { if (e.target.id === "modal-bak") e.target.classList.remove("åpen"); };
+
+  // ---------- PRODUKTER ----------
+  let produktListe = [];
+  async function lastProdukter() {
+    const { data, error } = await sb.from("produkter").select("*");
+    if (!error && data) { produktListe = data; tegnProdukter(); }
+  }
+  function tegnProdukter() {
+    const beholder = document.getElementById("produkter");
+    if (!produktListe.length) { beholder.innerHTML = `<p class="tom">Ingen produkter ennå – bli den første til å selge noe!</p>`; return; }
+    const kr = (n) => new Intl.NumberFormat("nb-NO").format(n) + " kr";
+    beholder.innerHTML = produktListe.map(p => `
+      <div class="produkt">
+        <img src="${p.bilde_url || ""}" alt="${p.navn}">
+        <div class="kropp">
+          <div class="tittel">${p.navn}</div>
+          <div class="pris">${kr(p.pris)}</div>
+          <div class="eier">Selges av ${p.eier}</div>
+          <span class="bygg-navn">🏠 Fra ${byggListe.find(b => b.eier === p.eier)?.navn || "bygget"}</span>
+        </div>
+      </div>`).join("");
+  }
+  document.getElementById("lagre-produkt").onclick = async () => {
+    const navn = document.getElementById("produkt-navn").value.trim();
+    const pris = parseFloat(document.getElementById("produkt-pris").value);
+    const fil = document.getElementById("produkt-bilde").files[0];
+    if (!navn || isNaN(pris)) { alert("Fyll inn navn og pris!"); return; }
+    if (!fil) { alert("Velg et bilde av produktet!"); return; }
+
+    try {
+      // Bildet krympes i nettleseren og lagres sammen med produktet – da slipper du å sette opp bilde-lagringsbøtte i Supabase
+      const bildeUrl = await krympBilde(fil, 800);
+      const { error } = await sb.from("produkter").insert([{ eier: meg, navn, pris, bilde_url: bildeUrl }]);
+      if (error) throw error;
+      document.getElementById("produkt-navn").value = "";
+      document.getElementById("produkt-pris").value = "";
+      document.getElementById("produkt-bilde").value = "";
+      lastProdukter();
+    } catch (feil) { alert("Klarte ikke lagre produktet: " + (feil.message || feil)); }
+  };
+  function krympBilde(fil, maksStørrelse) {
+    return new Promise((resolve, reject) => {
+      const leser = new FileReader();
+      leser.onerror = reject;
+      leser.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const skala = Math.min(1, maksStørrelse / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * skala);
+          c.height = Math.round(img.height * skala);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/jpeg", 0.75));
+        };
+        img.src = leser.result;
+      };
+      leser.readAsDataURL(fil);
+    });
+  }
+
+  // Start
+  if (meg) visApp();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="AwdgQJxASYXbPIXIccdZAA==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
