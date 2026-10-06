@@ -60,6 +60,8 @@
   .modal .produkt-rad { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
   .lukk { float: right; background: #e2e8f0; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.85rem; }
   .tom { text-align: center; color: #64748b; padding: 20px; font-style: italic; }
+  .slett-knapp { width: 100%; margin-top: 16px; padding: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+  .slett-knapp:hover { background: #fecaca; }
 </style>
 </head>
 <body>
@@ -102,7 +104,7 @@
             <option value="🏭">🏭 Fabrikk</option>
           </select>
           <input id="bygg-pris" type="number" placeholder="Pris (kr)" min="0" step="100000">
-          <input id="bygg-rente" type="number" placeholder="Rente (%)" min="0" max="20" step="0.5">
+          <input id="bygg-rente" type="number" placeholder="Rente (%)" step="0.1">
         </div>
         <button class="hoved-knapp" id="lagre-bygg">Bygg! 🔨</button>
         <p class="info-liten" style="margin-top:8px;">💡 Prøv gjerne ulike priser og renter – du kan alltid bygge om.</p>
@@ -208,7 +210,7 @@
     const pris = parseFloat(document.getElementById("bygg-pris").value);
     const rente = parseFloat(document.getElementById("bygg-rente").value);
     if (!navn || !klikkPos) { alert("Klikk først på kartet, og gi bygget et navn!"); return; }
-    if (isNaN(pris) || isNaN(rente) || rente < 0 || rente > 20) { alert("Skriv inn pris og en rimelig rente (0–20 %)."); return; }
+    if (isNaN(pris) || isNaN(rente)) { alert("Skriv inn pris og rente."); return; }
 
     // Hva koster det egentlig? (annuitet over 25 år)
     const r = rente / 100 / 12, n = 25 * 12;
@@ -228,6 +230,9 @@
     const r = (b.rente || 0) / 100 / 12, n = 25 * 12;
     const termin = b.rente > 0 ? (b.pris * r) / (1 - Math.pow(1 + r, -n)) : b.pris / n;
     const totalt = termin * n;
+    const slettKnapp = b.eier === meg
+      ? `<button class="slett-knapp" onclick="slettBygg(${b.id}, '${b.navn.replace(/'/g, "\\'")}')">🗑️ Slett bygget mitt</button>`
+      : "";
     const m = document.getElementById("modal-innhold");
     m.innerHTML = `
       <button class="lukk" onclick="document.getElementById('modal-bak').classList.remove('åpen')">✖ Lukk</button>
@@ -239,6 +244,7 @@
       <p>Per måned: <b class="verdi">${kr(termin)}</b></p>
       <p>Totalt betalt: <b class="verdi">${kr(totalt)}</b> <span class="info-liten">(hvorav ${kr(totalt - b.pris)} er renter!)</span></p>
       <div class="produkter-liste"><b>🛍️ Produkter her:</b><div id="modal-produkter"></div></div>
+      ${slettKnapp}
     `;
     const beholder = m.querySelector("#modal-produkter");
     const produkter = produktListe.filter(p => p.eier === b.eier);
@@ -248,6 +254,14 @@
     document.getElementById("modal-bak").classList.add("åpen");
   }
   document.getElementById("modal-bak").onclick = (e) => { if (e.target.id === "modal-bak") e.target.classList.remove("åpen"); };
+
+  async function slettBygg(id, navn) {
+    if (!confirm(`Slette «${navn}»? Dette kan ikke angres!`)) return;
+    const { error } = await sb.from("bygg").delete().eq("id", id);
+    if (error) { alert("Klarte ikke slette: " + error.message); return; }
+    document.getElementById("modal-bak").classList.remove("åpen");
+    lastBygg();
+  }
 
   // ---------- PRODUKTER ----------
   let produktListe = [];
@@ -312,6 +326,6 @@
   // Start
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="AwdgQJxASYXbPIXIccdZAA==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="OcP+EkY9rxc3HLziak3FuQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
