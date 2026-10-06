@@ -25,7 +25,12 @@
   .fane-knapp { flex: 1; padding: 10px; border: none; border-radius: 10px; background: #cbd5e1; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
   .fane-knapp.aktiv { background: #2563eb; color: white; }
 
-  #kart { position: relative; width: 100%; height: 420px; background: #d8f3dc; border: 3px solid #95d5b2; border-radius: 14px; overflow: hidden; cursor: pointer; background-image: radial-gradient(#b7e4c7 2px, transparent 2px); background-size: 40px 40px; }
+  #kart { position: relative; width: 100%; height: 420px; background: #d8f3dc; border: 3px solid #95d5b2; border-radius: 14px; overflow: hidden; }
+  .tomt-dot { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: #95d5b2; border: 3px solid #74c69d; transform: translate(-50%, -50%); cursor: pointer; transition: transform 0.15s, background 0.15s; z-index: 1; }
+  .tomt-dot:hover { transform: translate(-50%, -50%) scale(1.35); background: #52b788; }
+  .tomt-dot.valgt { background: #f59e0b; border-color: #d97706; animation: pulser 1s infinite alternate; }
+  .tomt-dot.opptatt { background: #6b7280; border-color: #4b5563; cursor: not-allowed; }
+  @keyframes pulser { from { transform: translate(-50%, -50%) scale(1.2); } to { transform: translate(-50%, -50%) scale(1.5); } }
   .bygg-pin { position: absolute; transform: translate(-50%, -100%); text-align: center; cursor: pointer; transition: transform 0.15s; z-index: 2; }
   .bygg-pin:hover { transform: translate(-50%, -100%) scale(1.15); z-index: 3; }
   .bygg-pin .ikon { font-size: 2rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
@@ -91,8 +96,8 @@
 
     <!-- KART -->
     <section id="kart-fane">
-      <div id="kart" title="Klikk der du vil bygge!"></div>
-      <p class="info-liten" style="margin-top:6px;">👆 Klikk på kartet der du vil plassere bygget ditt. Klikk på andres bygg for å se nærmere!</p>
+      <div id="kart" title="Klikk på en grønn dot for å bygge der!"></div>
+      <p class="info-liten" style="margin-top:6px;">👆 Klikk på en ledig (grønn) dot for å bygge der. Grå dots er opptatt. Klikk på andres bygg for å se nærmere!</p>
       <div class="kort" id="bygg-skjema" style="display:none;">
         <h2>🏗️ Bygg bygget ditt her!</h2>
         <div class="skjema-rad">
@@ -205,15 +210,38 @@
     };
   });
 
-  // ---------- KART ----------
+  // ---------- KART: faste tomter ----------
+  // 9 kolonner × 4 rader – øverste rad er tatt vekk så alle bygg synes
+  const TOMTER = [];
+  for (let rekke = 0; rekke < 4; rekke++) {
+    for (let kol = 0; kol < 9; kol++) {
+      TOMTER.push({ x: 10 + kol * 10, y: 35 + rekke * 18 });
+    }
+  }
   const kart = document.getElementById("kart");
-  kart.onclick = (e) => {
-    if (!meg) return;
-    const r = kart.getBoundingClientRect();
-    klikkPos = { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
-    document.getElementById("bygg-skjema").style.display = "block";
-    document.getElementById("bygg-skjema").scrollIntoView({ behavior: "smooth" });
-  };
+  let valgtTomt = null;
+
+  function tegnTomter() {
+    document.querySelectorAll(".tomt-dot").forEach(d => d.remove());
+    TOMTER.forEach((t) => {
+      const opptatt = byggListe.some(b => b.x === t.x && b.y === t.y);
+      const dot = document.createElement("div");
+      dot.className = "tomt-dot" + (opptatt ? " opptatt" : "") + (valgtTomt && valgtTomt.x === t.x && valgtTomt.y === t.y ? " valgt" : "");
+      dot.style.left = t.x + "%";
+      dot.style.top = t.y + "%";
+      dot.title = opptatt ? "Opptatt tomte" : "Ledig tomte – klikk for å bygge her!";
+      dot.onclick = (e) => {
+        e.stopPropagation();
+        if (opptatt) return;
+        valgtTomt = t;
+        klikkPos = { x: t.x, y: t.y };
+        tegnTomter();
+        document.getElementById("bygg-skjema").style.display = "block";
+        document.getElementById("bygg-skjema").scrollIntoView({ behavior: "smooth" });
+      };
+      kart.appendChild(dot);
+    });
+  }
 
   function tegnKart() {
     document.querySelectorAll(".bygg-pin").forEach(p => p.remove());
@@ -230,7 +258,7 @@
 
   async function lastBygg() {
     const { data, error } = await sb.from("bygg").select("*");
-    if (!error && data) { byggListe = data; tegnKart(); }
+    if (!error && data) { byggListe = data; tegnKart(); tegnTomter(); }
   }
 
   document.getElementById("lagre-bygg").onclick = async () => {
@@ -249,6 +277,7 @@
     const rad = { eier: meg, navn, ikon, pris, rente, total_kostnad: Math.round(totalt), x: klikkPos.x, y: klikkPos.y };
     const { error } = await sb.from("bygg").insert([rad]);
     if (error) { alert("Klarte ikke lagre: " + error.message); return; }
+    valgtTomt = null;
     document.getElementById("bygg-skjema").style.display = "none";
     lastBygg();
   };
@@ -370,6 +399,6 @@
   // Start
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="ubJwJD0f4lNvuD1NuatAgQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="6cfhC9epoP8UNuD4znuEyQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
