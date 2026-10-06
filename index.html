@@ -77,6 +77,7 @@
     <h2 style="margin-bottom:10px;">👋 Hvem er du?</h2>
     <input id="navn-input" placeholder="Skriv navnet ditt..." maxlength="40">
     <button id="login-knapp">Start ➡️</button>
+    <button id="lærer-knapp" style="width:100%;margin-top:8px;padding:8px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:8px;font-size:0.85rem;cursor:pointer;">👨‍🏫 Jeg er læreren</button>
     <p class="msg">Du trenger bare navnet ditt – resten husker Byggland for deg.</p>
   </div>
 
@@ -142,11 +143,14 @@
   // ⚙️ Koble til din Supabase: lim inn URL og anon-nøkkel fra prosjektet ditt (supabase.com → Settings → API)
   const SUPABASE_URL = "https://mbxqymlskfbzyworgtfp.supabase.co";
   const SUPABASE_KEY = "sb_publishable_ogyV0dLu7HeJsfyLaW08cA_WG8JlQWh";
+  // 👨‍🏫 Lærerkoden din – bare du (og eventuelt medlærere) kjenner denne
+  const ADMIN_KODE = "laerer2026";
   const sb = (SUPABASE_URL.includes("DITT-PROSJEKT"))
     ? { from: () => ({ select: () => Promise.resolve({ data: [], error: null }), insert: () => Promise.resolve({ data: null, error: { message: "Demo-modus: koble til Supabase i koden" } }) }) }
     : window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let meg = localStorage.getItem("byggland-navn") || null;
+  let erLærer = localStorage.getItem("byggland-lærer") === "ja";
   let byggListe = [];
   let klikkPos = null;
 
@@ -160,9 +164,27 @@
     localStorage.setItem("byggland-navn", n);
     visApp();
   };
+  document.getElementById("lærer-knapp").onclick = () => {
+    const kode = prompt("Skriv inn lærerkoden:");
+    if (kode === null) return;
+    if (kode !== ADMIN_KODE) { alert("Feil kode – prøv igjen."); return; }
+    let n = localStorage.getItem("byggland-navn");
+    if (!n) n = prompt("Ditt navn:") || "Læreren";
+    meg = n;
+    erLærer = true;
+    localStorage.setItem("byggland-navn", n);
+    localStorage.setItem("byggland-lærer", "ja");
+    visApp();
+  };
   function visApp() {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
+    if (erLærer) {
+      const badge = document.createElement("div");
+      badge.style.cssText = "text-align:center;margin-top:8px;font-size:0.85rem;color:#b45309;font-weight:600;";
+      badge.textContent = "👩‍🏫 Lærermodus aktiv – du kan endre og slette alle bygg";
+      document.querySelector(".fane-knapper").before(badge);
+    }
     lastBygg(); lastProdukter();
   }
 
@@ -227,12 +249,18 @@
   // ---------- MODAL ----------
   function åpneModal(b) {
     const kr = (n) => new Intl.NumberFormat("nb-NO").format(Math.round(n)) + " kr";
-    const r = (b.rente || 0) / 100 / 12, n = 25 * 12;
-    const termin = b.rente > 0 ? (b.pris * r) / (1 - Math.pow(1 + r, -n)) : b.pris / n;
-    const totalt = termin * n;
-    const slettKnapp = b.eier === meg
-      ? `<button class="slett-knapp" onclick="slettBygg(${b.id}, '${b.navn.replace(/'/g, "\\'")}')">🗑️ Slett bygget mitt</button>`
+    const kanEndre = erLærer || b.eier === meg;
+    const slettKnapp = b.eier === meg || erLærer
+      ? `<button class="slett-knapp" onclick="slettBygg(${b.id}, '${b.navn.replace(/'/g, "\\'")}')">🗑️ Slett ${erLærer && b.eier !== meg ? "dette bygget (lærer)" : "bygget mitt"}</button>`
       : "";
+    const adminVerktøy = erLærer ? `
+      <div style="margin-top:14px;padding:10px;background:#fef3c7;border-radius:10px;">
+        <p class="info-liten" style="margin-bottom:6px;">👩‍🏫 Lærer: endre renten og se hva som skjer</p>
+        <div style="display:flex;gap:8px;">
+          <input id="admin-rente" type="number" value="${b.rente}" step="0.1" style="flex:1;">
+          <button class="hoved-knapp" style="padding:8px 12px;font-size:0.85rem;" onclick="endreRente(${b.id})">Lagre rente</button>
+        </div>
+      </div>` : "";
     const m = document.getElementById("modal-innhold");
     m.innerHTML = `
       <button class="lukk" onclick="document.getElementById('modal-bak').classList.remove('åpen')">✖ Lukk</button>
@@ -240,10 +268,9 @@
       <h3>${b.navn}</h3>
       <p class="info-liten">Bygget til ${b.eier}</p>
       <p style="margin-top:10px;">Pris: <b>${kr(b.pris)}</b></p>
-      <p>Rente: <b>${b.rente} %</b> over 25 år</p>
-      <p>Per måned: <b class="verdi">${kr(termin)}</b></p>
-      <p>Totalt betalt: <b class="verdi">${kr(totalt)}</b> <span class="info-liten">(hvorav ${kr(totalt - b.pris)} er renter!)</span></p>
+      <p>Rente: <b>${b.rente} %</b></p>
       <div class="produkter-liste"><b>🛍️ Produkter her:</b><div id="modal-produkter"></div></div>
+      ${adminVerktøy}
       ${slettKnapp}
     `;
     const beholder = m.querySelector("#modal-produkter");
@@ -261,6 +288,16 @@
     if (error) { alert("Klarte ikke slette: " + error.message); return; }
     document.getElementById("modal-bak").classList.remove("åpen");
     lastBygg();
+  }
+
+  async function endreRente(id) {
+    const nyRente = parseFloat(document.getElementById("admin-rente").value);
+    if (isNaN(nyRente)) { alert("Skriv inn et gyldig tall."); return; }
+    const { error } = await sb.from("bygg").update({ rente: nyRente }).eq("id", id);
+    if (error) { alert("Klarte ikke lagre: " + error.message); return; }
+    await lastBygg();
+    const b = byggListe.find(x => x.id === id);
+    if (b) åpneModal(b); else document.getElementById("modal-bak").classList.remove("åpen");
   }
 
   // ---------- PRODUKTER ----------
@@ -326,6 +363,6 @@
   // Start
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="OcP+EkY9rxc3HLziak3FuQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="FEiycRqAZqgTmDRwHQ0lWQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
