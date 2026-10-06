@@ -86,6 +86,7 @@
     <div class="fane-knapper">
       <button class="fane-knapp aktiv" data-fane="kart-fane">🗺️ Kartet</button>
       <button class="fane-knapp" data-fane="butikk-fane">🛍️ Min butikk</button>
+      <button id="logg-ut-knapp" style="flex:0 0 auto;padding:10px 14px;background:#fee2e2;color:#b91c1c;border:none;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">🚪 Logg ut</button>
     </div>
 
     <!-- KART -->
@@ -187,6 +188,12 @@
     }
     lastBygg(); lastProdukter();
   }
+  document.getElementById("logg-ut-knapp").onclick = () => {
+    if (!confirm("Logge ut? Da må du skrive inn navnet ditt igjen neste gang.")) return;
+    localStorage.removeItem("byggland-navn");
+    localStorage.removeItem("byggland-lærer");
+    location.reload();
+  };
 
   // ---------- FANER ----------
   document.querySelectorAll(".fane-knapp").forEach(k => {
@@ -363,6 +370,6 @@
   // Start
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="FEiycRqAZqgTmDRwHQ0lWQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="ubJwJD0f4lNvuD1NuatAgQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
