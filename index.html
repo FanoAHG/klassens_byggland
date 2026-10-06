@@ -65,6 +65,9 @@
   .modal .produkt-rad { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
   .lukk { float: right; background: #e2e8f0; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.85rem; }
   .tom { text-align: center; color: #64748b; padding: 20px; font-style: italic; }
+  .ikon-valg-knapp { font-size: 1.7rem; width: 52px; height: 52px; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; transition: transform 0.1s, border-color 0.1s, background 0.1s; }
+  .ikon-valg-knapp:hover { transform: scale(1.12); background: #e0f2fe; }
+  .ikon-valg-knapp.valgt { border-color: #2563eb; background: #dbeafe; transform: scale(1.12); }
   .slett-knapp { width: 100%; margin-top: 16px; padding: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
   .slett-knapp:hover { background: #fecaca; }
 </style>
@@ -102,17 +105,11 @@
         <h2>🏗️ Bygg bygget ditt her!</h2>
         <div class="skjema-rad">
           <input id="bygg-navn" placeholder="Navn på bygget (f.eks. Villa Vippestikk)">
-          <select id="bygg-ikon">
-            <option value="🏠">🏠 Enebolig</option>
-            <option value="🏢">🏢 Blokk</option>
-            <option value="🏰">🏰 Slott</option>
-            <option value="🛖">🛖 Hytte</option>
-            <option value="🏬">🏬 Butikkbygg</option>
-            <option value="🏭">🏭 Fabrikk</option>
-          </select>
           <input id="bygg-pris" type="number" placeholder="Pris (kr)" min="0" step="100000">
           <input id="bygg-rente" type="number" placeholder="Rente (%)" step="0.1">
         </div>
+        <p class="info-liten" style="margin:4px 0 8px;">🏘️ Velg hva du vil bygge:</p>
+        <div id="ikon-valg" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
         <button class="hoved-knapp" id="lagre-bygg">Bygg! 🔨</button>
         <p class="info-liten" style="margin-top:8px;">💡 Prøv gjerne ulike priser og renter – du kan alltid bygge om.</p>
       </div>
@@ -160,7 +157,25 @@
   let byggListe = [];
   let klikkPos = null;
 
-  const IKONER = { "🏠":"enebolig", "🏢":"blokk", "🏰":"slott", "🛖":"hytte", "🏬":"butikk", "🏭":"fabrikk" };
+  const IKONER = { "🏠":"enebolig", "🏢":"blokk", "🏰":"slott", "🛖":"hytte", "🏬":"butikk", "🏭":"fabrikk", "🏫":"skole", "🏥":"sykehus", "🏪":"kiosk", "⛪":"kirke", "🏨":"hotell" };
+  const BYGG_VALG = ["🏠", "🏢", "🏰", "🛖", "🏬", "🏭", "🏫", "🏥", "🏪", "⛪", "🏨"];
+  let valgtIkon = "🏠";
+
+  // ---------- EMOJI-VELGER ----------
+  function tegnIkonValg() {
+    const beholder = document.getElementById("ikon-valg");
+    beholder.innerHTML = "";
+    const unike = [...new Set(BYGG_VALG)];
+    unike.forEach(ik => {
+      const knapp = document.createElement("button");
+      knapp.type = "button";
+      knapp.textContent = ik;
+      knapp.title = IKONER[ik] || "";
+      knapp.className = "ikon-valg-knapp" + (ik === valgtIkon ? " valgt" : "");
+      knapp.onclick = () => { valgtIkon = ik; tegnIkonValg(); };
+      beholder.appendChild(knapp);
+    });
+  }
 
   // ---------- LOGIN ----------
   document.getElementById("login-knapp").onclick = () => {
@@ -211,7 +226,6 @@
   });
 
   // ---------- KART: faste tomter ----------
-  // 9 kolonner × 4 rader – øverste del er skog, veiene går mellom rekkene
   const TOMTER = [];
   for (let rekke = 0; rekke < 4; rekke++) {
     for (let kol = 0; kol < 9; kol++) {
@@ -264,7 +278,7 @@
 
   document.getElementById("lagre-bygg").onclick = async () => {
     const navn = document.getElementById("bygg-navn").value.trim();
-    const ikon = document.getElementById("bygg-ikon").value;
+    const ikon = valgtIkon;
     const pris = parseFloat(document.getElementById("bygg-pris").value);
     const rente = parseFloat(document.getElementById("bygg-rente").value);
     if (!navn || !klikkPos) { alert("Klikk først på kartet, og gi bygget et navn!"); return; }
@@ -398,8 +412,9 @@
   }
 
   // Start
+  tegnIkonValg();
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="du51w44Yx6yavGGEhAABPg==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="5reo1IaFyP36RGs2eD4oLQ==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
