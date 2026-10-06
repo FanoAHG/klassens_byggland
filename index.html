@@ -26,7 +26,6 @@
   .fane-knapp.aktiv { background: #2563eb; color: white; }
 
   #kart { position: relative; width: 100%; height: 420px; background: #d8f3dc; border: 3px solid #95d5b2; border-radius: 14px; overflow: hidden; }
-  #kart svg.veier { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   .tomt-dot { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: #95d5b2; border: 3px solid #74c69d; transform: translate(-50%, -50%); cursor: pointer; transition: transform 0.15s, background 0.15s; z-index: 1; }
   .tomt-dot:hover { transform: translate(-50%, -50%) scale(1.35); background: #52b788; }
   .tomt-dot.valgt { background: #f59e0b; border-color: #d97706; animation: pulser 1s infinite alternate; }
@@ -97,46 +96,7 @@
 
     <!-- KART -->
     <section id="kart-fane">
-      <div id="kart" title="Klikk på en ledig dot for å bygge der!">
-        <!-- Trær langs toppen av kartet (ingen tomter der) -->
-        <svg class="veier" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <g font-size="4.5">
-            <text x="3" y="8">🌲</text><text x="9" y="6">🌲</text><text x="15" y="9">🌳</text>
-            <text x="21" y="6">🌲</text><text x="27" y="9">🌲</text><text x="33" y="6">🌳</text>
-            <text x="39" y="9">🌲</text><text x="45" y="6">🌲</text><text x="51" y="9">🌳</text>
-            <text x="57" y="6">🌲</text><text x="63" y="9">🌲</text><text x="69" y="6">🌳</text>
-            <text x="75" y="9">🌲</text><text x="81" y="6">🌲</text><text x="87" y="9">🌳</text>
-            <text x="93" y="6">🌲</text><text x="97" y="9">🌲</text>
-          </g>
-          <!-- asfalt: gater mellom dott-rekkene, vertikale veier mellom kolonnene -->
-          <g stroke="#94a3b8" stroke-width="5" fill="none" stroke-linecap="round">
-            <line x1="4" y1="33" x2="96" y2="33"/>
-            <line x1="4" y1="51" x2="96" y2="51"/>
-            <line x1="4" y1="69" x2="96" y2="69"/>
-            <line x1="4" y1="87" x2="96" y2="87"/>
-            <line x1="25" y1="31" x2="25" y2="89"/>
-            <line x1="75" y1="31" x2="75" y2="89"/>
-          </g>
-          <!-- midtstriper -->
-          <g stroke="#f8fafc" stroke-width="0.7" fill="none" stroke-dasharray="2 2">
-            <line x1="4" y1="33" x2="96" y2="33"/>
-            <line x1="4" y1="51" x2="96" y2="51"/>
-            <line x1="4" y1="69" x2="96" y2="69"/>
-            <line x1="4" y1="87" x2="96" y2="87"/>
-            <line x1="25" y1="31" x2="25" y2="89"/>
-            <line x1="75" y1="31" x2="75" y2="89"/>
-          </g>
-          <!-- biler: større, midt på veien, rotert på de vertikale -->
-          <g font-size="4.5">
-            <text x="36" y="34.6">🚗</text>
-            <text x="56" y="52.6">🚙</text>
-            <text x="8" y="70.6">🚕</text>
-            <text x="62" y="88.6">🚚</text>
-            <text x="25" y="44" transform="rotate(90 25 44)">🚗</text>
-            <text x="75" y="78" transform="rotate(90 75 78)">🚙</text>
-          </g>
-        </svg>
-      </div>
+      <div id="kart" title="Klikk på en ledig dot for å bygge der!"></div>
       <p class="info-liten" style="margin-top:6px;">👆 Klikk på en ledig (grønn) dot for å bygge der. Grå dots er opptatt. Klikk på andres bygg for å se nærmere!</p>
       <div class="kort" id="bygg-skjema" style="display:none;">
         <h2>🏗️ Bygg bygget ditt her!</h2>
@@ -440,6 +400,6 @@
   // Start
   if (meg) visApp();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="648WnlGFxLdLdmKzBuwNPw==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="qYfKM4LHA8AGFuqkIj8MEg==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
